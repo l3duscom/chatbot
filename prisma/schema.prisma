@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatar        String?
+  password      String?
+  emailVerified DateTime?
+  role          Role      @default(USER)
+  plan          Plan      @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relações
+  accounts     Account[]
+  sessions     Session[]
+  chatbots     Chatbot[]
+  conversations Conversation[]
+  subscriptions Subscription[]
+  apiKeys      ApiKey[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Chatbot {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  avatar          String?
+  prompt          String    @db.Text
+  welcomeMessage  String    @default("Olá! Como posso ajudá-lo hoje?")
+  fallbackMessage String    @default("Desculpe, não entendi. Pode reformular sua pergunta?")
+  isActive        Boolean   @default(true)
+  userId          String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Configurações
+  settings        Json      @default("{}")
+  
+  // Relações
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations   Conversation[]
+  knowledgeBase   KnowledgeBase[]
+  integrations    Integration[]
+
+  @@map("chatbots")
+}
+
+model KnowledgeBase {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  type      KnowledgeType
+  source    String?
+  metadata  Json     @default("{}")
+  chatbotId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  chatbot   Chatbot @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_base")
+}
+
+model Conversation {
+  id         String   @id @default(cuid())
+  title      String?
+  userId     String?
+  chatbotId  String
+  sessionId  String
+  status     ConversationStatus @default(ACTIVE)
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relações
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  chatbot    Chatbot  @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  messages   Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  content        String   @db.Text
+  role           MessageRole
+  conversationId String
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  // Relações
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Integration {
+  id        String   @id @default(cuid())
+  type      IntegrationType
+  name      String
+  config    Json     @default("{}")
+  isActive  Boolean  @default(true)
+  chatbotId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  chatbot   Chatbot @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+
+  @@map("integrations")
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  userId        String
+  plan          Plan
+  status        SubscriptionStatus
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  canceledAt    DateTime?
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relações
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  userId    String
+  lastUsed  DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  chatbotId   String
+  eventType   String
+  eventData   Json     @default("{}")
+  userId      String?
+  sessionId   String?
+  createdAt   DateTime @default(now())
+
+  @@map("analytics")
+}
+
+// Enums
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum KnowledgeType {
+  TEXT
+  FAQ
+  DOCUMENT
+  URL
+  API
+}
+
+enum IntegrationType {
+  WEBHOOK
+  SLACK
+  DISCORD
+  WHATSAPP
+  TELEGRAM
+  EMAIL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+} 
