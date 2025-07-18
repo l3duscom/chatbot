@@ -190,7 +190,7 @@ export class KnowledgeBaseManager {
       return {
         success: false,
         imported: 0,
-        errors: [error.message],
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
       }
     }
   }

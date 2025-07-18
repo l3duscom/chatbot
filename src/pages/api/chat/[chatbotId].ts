@@ -114,8 +114,8 @@ export default async function handler(
     // Configurar Gemini
     const geminiChatbot = new GeminiChatbot({
       systemPrompt: chatbot.prompt,
-      temperature: chatbot.settings?.temperature || 0.7,
-      maxTokens: chatbot.settings?.maxTokens || 1000,
+      temperature: (chatbot.settings as any)?.temperature || 0.7,
+      maxTokens: (chatbot.settings as any)?.maxTokens || 1000,
     })
 
     // Gerar resposta

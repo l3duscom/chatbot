@@ -110,19 +110,20 @@ Assistente:`
       // Gerar resposta em stream
       const result = await this.model.generateContentStream(fullPrompt)
 
-      async function* streamGenerator() {
-        for await (const chunk of result.stream) {
-          const chunkText = chunk.text()
-          if (chunkText) {
-            yield chunkText
-          }
-        }
-      }
-
-      return streamGenerator()
+      // Retornar o generator
+      return this.createStreamGenerator(result.stream)
     } catch (error) {
       console.error('Gemini streaming error:', error)
       throw new Error('Failed to generate streaming response')
+    }
+  }
+
+  private async *createStreamGenerator(stream: any): AsyncGenerator<string, void, unknown> {
+    for await (const chunk of stream) {
+      const chunkText = chunk.text()
+      if (chunkText) {
+        yield chunkText
+      }
     }
   }
 
@@ -224,12 +225,12 @@ Gere 3 sugestões de resposta curtas e relevantes (máximo 10 palavras cada):
       const response = await result.response
       const text = response.text()
 
-      // Extrair as sugestões
-      const suggestions = text
+      // Extrair sugestões numeradas
+      const suggestions = response
         .split('\n')
-        .filter(line => line.match(/^\d+\./))
-        .map(line => line.replace(/^\d+\.\s*/, '').trim())
-        .filter(suggestion => suggestion.length > 0)
+        .filter((line: string) => line.match(/^\d+\./))
+        .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
+        .filter((suggestion: string) => suggestion.length > 0)
 
       return suggestions.slice(0, 3)
     } catch (error) {

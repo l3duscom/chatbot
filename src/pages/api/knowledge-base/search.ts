@@ -70,7 +70,7 @@ export default async function handler(
       )
 
       if (relevanceScore > threshold) {
-        const tags = item.metadata?.tags || []
+        const tags = (item.metadata as any)?.tags || []
         
         searchResults.push({
           id: item.id,
@@ -115,7 +115,7 @@ function calculateRelevanceScore(
 
   const titleLower = item.title.toLowerCase()
   const contentLower = item.content.toLowerCase()
-  const tags = item.metadata?.tags || []
+  const tags = (item.metadata as any)?.tags || []
 
   // Pontuação por correspondência exata no título (peso 40)
   if (titleLower.includes(queryLower)) {
